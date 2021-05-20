@@ -1,0 +1,44 @@
+CREATE UNIT <unit_name>
+REMOVE UNIT <unit_name>
+STORE ($key, $value) IN <unit_name>
+FETCH ALL KEY|VALUE|PAIRS IN <unit_name>
+SEARCH <unit_name> FOR KEY ==|=~|!~ $string [ OUTPUT VALUES|KEYS|PAIRS ] [ LIMIT /[0-9]+/ ]
+REMOVE FROM <unit_name> KEY ==|=~|!~ $string
+
+EXAMPLE:
+
+CREATE UNIT chapters;
+STORE ("chapter1", '{"title":"","next":null,"scenes":[]}') IN chapters;
+SEARCH chapters FOR KEY =~ "1";
+REMOVE FROM chapters KEY == "chapter1";
+REMOVE UNIT chapters;
+
+perl code:
+```perl
+use Storable::Ref;
+my %units;
+
+sub create_unit($unit_name) {
+  return { error => "unable to create unit, missing value" } unless (defined $unit_name);
+  if ($unit_name !~ m/^[A-Za-z0-9_]+$/) {
+    return { error => "unable to create unit, names should match /^[A-Za-z0-9_]+$/" };
+  }
+  if (-f "~/perldb/units/$unit_name") {
+    return { error => "unable to create unit, it already exists" };
+  }
+  $units{$unit_name} = new Storable::Ref({}, "~/perldb/units/$unit_name");
+  return { sucess => "created $unit_name" };
+}
+
+sub remove_unit($unit_name) {
+    return { error => "unable to remove unit, missing value" } unless (defined $unit_name);
+  if ($unit_name !~ m/^[A-Za-z0-9_]+$/) {
+    return { error => "unable to remove unit, names should match /^[A-Za-z0-9_]+$/" };
+  }
+  if (exists($units{$unit_name})) {
+    delete($units{$unit_name});
+    unlink "~/perldb/units/$unit_name";
+    return { sucess => "removed $unit_name" };
+  }
+  return { error => "unable to remove unit, unit not found" };
+}

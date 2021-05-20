@@ -1,0 +1,54 @@
+#!/usr/local/bin/perl
+
+use PerlDB::Unit;
+use Mojolicious::Lite -signatures;
+
+post '/create/unit/:name', sub ($c) {
+  my $unit_name = $c->param("name");
+  my $creation_result = Unit::create($unit_name);
+  return $c->render(json => $creation_result);
+};
+
+put '/store/:into/:key/', sub ($c) {
+  my $unit_name = $c->param("into");
+  my $key = $c->param("key");
+  my $value = $c->req->json;
+
+  my $unit = Unit::load($unit_name);
+  my $result = $unit->persist($key, $value);
+  Unit::save($unit_name, $unit);
+  return $c->render(json => $result);
+};
+
+get '/search/:name/:value/:using', sub ($c) {
+  my ($unit_name, $value, $operator) = ($c->param("name"), $c->param("value"), $c->param("using"));
+  
+  my $output = defined $c->param("output")? $c->param("output") : "PAIRS";
+  
+  my $sorted = defined $c->param("sorted") && $c->param("sorted") eq "1"? 1 : 0;
+
+
+  my $unit = Unit::load($unit_name);
+  my $result = $unit->search($operator, $value, $output, $sorted);
+  return $c->render(json => $result);
+};
+
+get '/all/:name', sub ($c) {
+  my $unit_name = $c->param("name");
+  my $output = defined $c->param("output")? $c->param("output") : "PAIRS";
+  my $sorted = defined $c->param("sorted") && $c->param("sorted") eq "1"? 1 : 0;
+
+  my $unit = Unit::load($unit_name);
+  my $result = $unit->all($output, $sorted);
+  return $c->render(json => $result);
+};
+
+del '/remove/:name/:value/:operator', sub ($c) {
+  my ($unit_name, $value, $operator) = ($c->param("name"), $c->param("value"), $c->param("operator"));
+  my $unit = Unit::load($unit_name);
+  my $result = $unit->remove($operator, $value);
+  Unit::save($unit_name, $unit);
+  return $c->render(json => $result);
+};
+
+app->start("daemon", "-m", "production", "-l", "http://*:9091");
